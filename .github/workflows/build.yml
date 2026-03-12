@@ -1,0 +1,89 @@
+name: Build Binaries
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: ${{ matrix.artifact }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-linux-x86_64-cpu,      ext: ""     }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-linux-x86_64-vulkan,   ext: ""     }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-linux-x86_64-cuda,     ext: ""     }
+          - { os: windows-latest, features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-windows-x86_64-cpu,    ext: .exe   }
+          - { os: windows-latest, features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-windows-x86_64-vulkan, ext: .exe   }
+          - { os: windows-latest, features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-windows-x86_64-cuda,   ext: .exe   }
+          - { os: macos-13,       features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-macos-x86_64-cpu,      ext: ""     }
+          - { os: macos-13,       features: "qwen3-asr-ggml,metal",       gpu: metal,  artifact: audiopipe-macos-x86_64-metal,    ext: ""     }
+          - { os: macos-latest,   features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-macos-aarch64-cpu,     ext: ""     }
+          - { os: macos-latest,   features: "qwen3-asr-ggml,metal",       gpu: metal,  artifact: audiopipe-macos-aarch64-metal,   ext: ""     }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Vulkan SDK (Linux)
+        if: runner.os == 'Linux' && matrix.gpu == 'vulkan'
+        run: |
+          wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc \
+            | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-noble.list \
+            https://packages.lunarg.com/vulkan/lunarg-vulkan-noble.list
+          sudo apt-get update
+          sudo apt-get install -y vulkan-sdk
+
+      - name: Install CUDA toolkit
+        if: matrix.gpu == 'cuda'
+        uses: Jimver/cuda-toolkit@v0.2.15
+        with:
+          cuda: '12.4.0'
+          method: network
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.features }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.features }}-
+            ${{ runner.os }}-cargo-
+
+      - name: Cache GPU SDK
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/qwen3-asr-sys
+          key: ${{ runner.os }}-qwen3-sdk-${{ matrix.gpu }}-v1
+
+      - name: Build
+        run: cargo build --release --no-default-features --features ${{ matrix.features }}
+        env:
+          GGML_CPU_ONLY: ${{ matrix.gpu == 'cpu' && '1' || '' }}
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: mv target/release/audiopipe target/release/${{ matrix.artifact }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Move-Item target/release/audiopipe.exe target/release/${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: target/release/${{ matrix.artifact }}
+          retention-days: 30
