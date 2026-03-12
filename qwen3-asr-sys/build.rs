@@ -231,6 +231,27 @@ fn main() {
             }
             println!("cargo:rustc-link-lib=vulkan-1");
         }
+        if let Some(ref cu) = cuda {
+            let lib_dir = cu.root.join("lib").join("x64");
+            println!("cargo:rustc-link-search=native={}", lib_dir.display());
+            println!("cargo:rustc-link-lib=cudart");
+            println!("cargo:rustc-link-lib=cublas");
+            println!("cargo:rustc-link-lib=cublasLt");
+        }
+    }
+
+    // CUDA runtime linking (Linux)
+    if target_os == "linux" {
+        if let Some(ref cu) = cuda {
+            // Try lib64 first (standard), then targets/ subdirectory
+            let lib64 = cu.root.join("lib64");
+            let lib_targets = cu.root.join("targets").join("x86_64-linux").join("lib");
+            let lib_dir = if lib64.exists() { lib64 } else { lib_targets };
+            println!("cargo:rustc-link-search=native={}", lib_dir.display());
+            println!("cargo:rustc-link-lib=cudart");
+            println!("cargo:rustc-link-lib=cublas");
+            println!("cargo:rustc-link-lib=cublasLt");
+        }
     }
 
     // ── 5. Rebuild triggers ──────────────────────────────────────────────
