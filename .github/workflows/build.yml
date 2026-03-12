@@ -12,16 +12,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,  features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-linux-x86_64-cpu,      ext: ""     }
-          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-linux-x86_64-vulkan,   ext: ""     }
-          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-linux-x86_64-cuda,     ext: ""     }
-          - { os: windows-latest, features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-windows-x86_64-cpu,    ext: .exe   }
-          - { os: windows-latest, features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-windows-x86_64-vulkan, ext: .exe   }
-          - { os: windows-latest, features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-windows-x86_64-cuda,   ext: .exe   }
-          - { os: macos-13,       features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-macos-x86_64-cpu,      ext: ""     }
-          - { os: macos-13,       features: "qwen3-asr-ggml,metal",       gpu: metal,  artifact: audiopipe-macos-x86_64-metal,    ext: ""     }
-          - { os: macos-latest,   features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-macos-aarch64-cpu,     ext: ""     }
-          - { os: macos-latest,   features: "qwen3-asr-ggml,metal",       gpu: metal,  artifact: audiopipe-macos-aarch64-metal,   ext: ""     }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-linux-x86_64-cpu,      ext: ""   }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-linux-x86_64-vulkan,   ext: ""   }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-linux-x86_64-cuda,     ext: ""   }
+          - { os: windows-latest, features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-windows-x86_64-cpu,    ext: .exe }
+          - { os: windows-latest, features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-windows-x86_64-vulkan, ext: .exe }
+          - { os: windows-latest, features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-windows-x86_64-cuda,   ext: .exe }
+          - { os: macos-latest,   features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-macos-aarch64-cpu,     ext: ""   }
+          - { os: macos-latest,   features: "qwen3-asr-ggml,metal",       gpu: metal,  artifact: audiopipe-macos-aarch64-metal,   ext: ""   }
 
     steps:
       - name: Checkout
@@ -44,9 +42,9 @@ jobs:
 
       - name: Install CUDA toolkit
         if: matrix.gpu == 'cuda'
-        uses: Jimver/cuda-toolkit@v0.2.15
+        uses: Jimver/cuda-toolkit@v0.2.30
         with:
-          cuda: '12.4.0'
+          cuda: '12.6.3'
           method: network
 
       - name: Cache Cargo
@@ -56,9 +54,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ matrix.features }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.artifact }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-${{ matrix.features }}-
+            ${{ runner.os }}-cargo-${{ matrix.artifact }}-
             ${{ runner.os }}-cargo-
 
       - name: Cache GPU SDK
