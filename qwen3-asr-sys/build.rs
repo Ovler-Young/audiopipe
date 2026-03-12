@@ -234,6 +234,7 @@ fn main() {
         if let Some(ref cu) = cuda {
             let lib_dir = cu.root.join("lib").join("x64");
             println!("cargo:rustc-link-search=native={}", lib_dir.display());
+            println!("cargo:rustc-link-lib=cuda");
             println!("cargo:rustc-link-lib=cudart");
             println!("cargo:rustc-link-lib=cublas");
             println!("cargo:rustc-link-lib=cublasLt");
@@ -248,6 +249,7 @@ fn main() {
             let lib_targets = cu.root.join("targets").join("x86_64-linux").join("lib");
             let lib_dir = if lib64.exists() { lib64 } else { lib_targets };
             println!("cargo:rustc-link-search=native={}", lib_dir.display());
+            println!("cargo:rustc-link-lib=cuda");
             println!("cargo:rustc-link-lib=cudart");
             println!("cargo:rustc-link-lib=cublas");
             println!("cargo:rustc-link-lib=cublasLt");
