@@ -12,14 +12,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,  features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-linux-x86_64-cpu,      ext: ""   }
-          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-linux-x86_64-vulkan,   ext: ""   }
-          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-linux-x86_64-cuda,     ext: ""   }
-          - { os: windows-latest, features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-windows-x86_64-cpu,    ext: .exe }
-          - { os: windows-latest, features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-windows-x86_64-vulkan, ext: .exe }
-          - { os: windows-latest, features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-windows-x86_64-cuda,   ext: .exe }
-          - { os: macos-latest,   features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-macos-aarch64-cpu,     ext: ""   }
-          - { os: macos-latest,   features: "qwen3-asr-ggml,metal",       gpu: metal,  artifact: audiopipe-macos-aarch64-metal,   ext: ""   }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-linux-x86_64-cpu,      ext: "",   target_dir: target }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-linux-x86_64-vulkan,   ext: "",   target_dir: target }
+          - { os: ubuntu-latest,  features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-linux-x86_64-cuda,     ext: "",   target_dir: target }
+          - { os: windows-latest, features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-windows-x86_64-cpu,    ext: .exe, target_dir: C:/ct  }
+          - { os: windows-latest, features: "qwen3-asr-ggml,vulkan-ggml", gpu: vulkan, artifact: audiopipe-windows-x86_64-vulkan, ext: .exe, target_dir: C:/ct  }
+          - { os: windows-latest, features: "qwen3-asr-ggml,cuda-ggml",   gpu: cuda,   artifact: audiopipe-windows-x86_64-cuda,   ext: .exe, target_dir: C:/ct  }
+          - { os: macos-latest,   features: "qwen3-asr-ggml",             gpu: cpu,    artifact: audiopipe-macos-aarch64-cpu,     ext: "",   target_dir: target }
+          - { os: macos-latest,   features: "qwen3-asr-ggml,metal",       gpu: metal,  artifact: audiopipe-macos-aarch64-metal,   ext: "",   target_dir: target }
 
     steps:
       - name: Checkout
@@ -65,7 +65,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
+            ${{ matrix.target_dir }}
           key: ${{ runner.os }}-cargo-${{ matrix.artifact }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-${{ matrix.artifact }}-
@@ -80,20 +80,21 @@ jobs:
       - name: Build
         run: cargo build --release --no-default-features --features ${{ matrix.features }}
         env:
+          CARGO_TARGET_DIR: ${{ matrix.target_dir }}
           GGML_CPU_ONLY: ${{ matrix.gpu == 'cpu' && '1' || '' }}
 
       - name: Rename binary (Unix)
         if: runner.os != 'Windows'
-        run: mv target/release/audiopipe target/release/${{ matrix.artifact }}
+        run: mv ${{ matrix.target_dir }}/release/audiopipe ${{ matrix.target_dir }}/release/${{ matrix.artifact }}
 
       - name: Rename binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Move-Item -Force target/release/audiopipe.exe target/release/${{ matrix.artifact }}
+        run: Move-Item -Force ${{ matrix.target_dir }}/release/audiopipe.exe ${{ matrix.target_dir }}/release/${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: target/release/${{ matrix.artifact }}
+          path: ${{ matrix.target_dir }}/release/${{ matrix.artifact }}
           retention-days: 30
